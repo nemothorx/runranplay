@@ -1,6 +1,17 @@
 #!/bin/bash
 
 # RUN RANdom PLAYlist
+# ie, play random songs. simply. 
+
+# version log
+# 20030930 - 1.0 release
+# 20040505 - 1.1
+#	* use /tmp/.playlist if $PWD/.playlist is unwritable	
+#	* ensure `find` only finds regular files 
+
+# Created by Nemo <runranplay@nemo.house.cx> for himself. 
+# Let's say it's licensed under the GPL. That's simple eh? :)
+
 
 COUNT=0
 declare -a HISTORY
@@ -8,23 +19,31 @@ for i in $(seq 0 9) ; do
   HISTORY[$i]=0
 done
 
-# ie, play songs. simply. 
 
+function do_findpldir {
+  if [ -w . ] ; then
+    PLAYLISTAT="."
+    PLAYLISTTYPE=local
+  else
+    PLAYLISTAT="/tmp"
+    PLAYLISTTYPE=shared
+  fi
+}
 
-function findsongs {
+function do_findsongs {
 # first up, let's find all the songs we want
 
 echo -n " * Finding songs in $PWD"
-# find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -type f -printf '%p\n' > .playlist
-find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -follow -printf '%p\n' > .playlist
-echo " ... saved to .playlist"
+# find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -type f -printf '%p\n' > $PLAYLISTAT/.playlist
+find "." -type f \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -follow -printf '%p\n' > $PLAYLISTAT/.playlist
+echo " ... saved to $PLAYLISTAT/.playlist"
 
-SONGCOUNT=$(cat .playlist | wc -l)
+SONGCOUNT=$(cat $PLAYLISTAT/.playlist | wc -l)
 echo " * Songs in playlist: $SONGCOUNT"
 }
 
 
-function getrandom {
+function do_getrandom {
 # this functions finds us a random number, one that hasn't been used recently
 
 # force the looping :)
@@ -32,8 +51,9 @@ UNIQUE=no
 
 while [ "$UNIQUE" == "no" ] ; do 
 
-  PLAYNUMBER=$(echo "($RANDOM*$SONGCOUNT)/2147483648+1" | bc)  # should be an integer number?
+  PLAYNUMBER=$(echo "($RANDOM*$SONGCOUNT)/32767+1" | bc)  # should be an integer number?
 
+# echo -n "debug: $PLAYNUMBER"
   # assume our chosen number IS unique...
   UNIQUE=yes
 
@@ -43,28 +63,27 @@ while [ "$UNIQUE" == "no" ] ; do
 	if [ ${HISTORY[$i]} -eq $PLAYNUMBER ] ; then
 		# found a repeat, unique=no
 		UNIQUE=no
+		echo -n "."
 	fi
   done
 
+#  echo "" # debug
 # at this point, either unique=no and we loop back and choose a new PLAYNUMBER
 # or unique=yes and we leave the loop
 
 done
-
   # finally, store our selected number in the array for future history
   HISTORY[$COUNTCHK]=$PLAYNUMBER
-
-
 }
 
 
-function playrandom {
+function do_playrandom {
 
 # first, find a random song from that list
-getrandom
+do_getrandom
 
 # is there a better way to extract a specific line from a file?
-SONG=$(head -n $PLAYNUMBER .playlist | tail -1)
+SONG=$(head -n $PLAYNUMBER $PLAYLISTAT/.playlist | tail -1)
 
 SONGTYPE=${SONG##*.}
 
@@ -75,12 +94,12 @@ if [ "$SONGTYPE" == "ogg" ] || [ "$SONGTYPE" == "OGG" ] ; then
 elif [ "$SONGTYPE" == "mp3" ] || [ "$SONGTYPE" == "MP3" ] ; then
   mpg321 -q "$SONG"
 else
-  play "$SONG"
+  bplay "$SONG"
 fi
 }
 
 
-function showtime {
+function do_showtime {
         TIME=$1;
         OUT=""
 	
@@ -124,7 +143,7 @@ function showtime {
 
 
 # all functions now defined, let's get down to business. 
-# main () if you like that kind of thing. 
+# main() if you like that kind of thing. 
 
 STARTTIME=$(date +%s)
 
@@ -135,15 +154,19 @@ while true ; do
     TOTALTIME=$(($NOWTIME - $STARTTIME))
     if [ "$COUNT" -gt "0" ] ; then 
       AVERAGETIME=$(($TOTALTIME / $COUNT))
-      SHOW_TOTALTIME=$(showtime $TOTALTIME)
-      SHOW_AVERAGETIME=$(showtime $AVERAGETIME)
+      SHOW_TOTALTIME=$(do_showtime $TOTALTIME)
+      SHOW_AVERAGETIME=$(do_showtime $AVERAGETIME)
       echo " * $COUNT tracks in $SHOW_TOTALTIME. Average $SHOW_AVERAGETIME per track"
     fi
-    echo " * Auto updating playlist now"
-    findsongs
+    do_findpldir 
+    echo " * Auto updating $PLAYLISTTYPE playlist now"
+    do_findsongs
   fi
   COUNT=$((COUNT+1))
-  playrandom
+  do_playrandom
 done
 
+# actually, this last bit never occurs, since the ^c'ing out of the
+# previous loop exits the script. I've not bothered to capture the signal
+# and handle it properly. 
 echo "$COUNT songs played"
