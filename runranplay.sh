@@ -15,7 +15,8 @@ function findsongs {
 # first up, let's find all the songs we want
 
 echo -n " * Finding songs in $PWD"
-find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -type f -printf '%p\n' > .playlist
+# find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -type f -printf '%p\n' > .playlist
+find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -follow -printf '%p\n' > .playlist
 echo " ... saved to .playlist"
 
 SONGCOUNT=$(cat .playlist | wc -l)
