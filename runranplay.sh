@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # RUN RANdom PLAYlist
 # ie, play random songs. simply. 
 
@@ -8,14 +9,17 @@
 # 20040505 - 1.1
 #	* use /tmp/.playlist if $PWD/.playlist is unwritable	
 #	* ensure `find` only finds regular files 
+# 20050222 - 1.2
+#	* $SCANRATE added
 
 # Created by Nemo <runranplay@nemo.house.cx> for himself. 
 # Let's say it's licensed under the GPL. That's simple eh? :)
 
-
-COUNT=0
+SCANRATE=20	# rescan every how many songs?
+COUNT=0		# how many songs have we played?
+HISTORYSIZE=100	# how much collision history to keep?
 declare -a HISTORY
-for i in $(seq 0 9) ; do
+for i in $(seq 0 $HISTORYSIZE) ; do
   HISTORY[$i]=0
 done
 
@@ -35,10 +39,11 @@ function do_findsongs {
 
 echo -n " * Finding songs in $PWD"
 # find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -type f -printf '%p\n' > $PLAYLISTAT/.playlist
-find "." -type f \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -follow -printf '%p\n' > $PLAYLISTAT/.playlist
-echo " ... saved to $PLAYLISTAT/.playlist"
+find "." -type f \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -follow -printf '%p\n' > $PLAYLISTAT/.playlist.m3u
+sort $PLAYLISTAT/.playlist.m3u > $PLAYLISTAT/playlist.m3u
+echo " ... saved to $PLAYLISTAT/playlist.m3u"
 
-SONGCOUNT=$(cat $PLAYLISTAT/.playlist | wc -l)
+SONGCOUNT=$(cat $PLAYLISTAT/playlist.m3u | wc -l)
 echo " * Songs in playlist: $SONGCOUNT"
 }
 
@@ -59,7 +64,7 @@ while [ "$UNIQUE" == "no" ] ; do
 
 
 # loop through the history checking for repeats
-  for i in $(seq 0 9) ; do
+  for i in $(seq 0 $HISTORYSIZE) ; do
 	if [ ${HISTORY[$i]} -eq $PLAYNUMBER ] ; then
 		# found a repeat, unique=no
 		UNIQUE=no
@@ -83,18 +88,19 @@ function do_playrandom {
 do_getrandom
 
 # is there a better way to extract a specific line from a file?
-SONG=$(head -n $PLAYNUMBER $PLAYLISTAT/.playlist | tail -1)
+SONG=$(head -n $PLAYNUMBER $PLAYLISTAT/playlist.m3u | tail -1)
 
 SONGTYPE=${SONG##*.}
 
 echo "$SONG"
+echo "$SONG" > /tmp/.currentsong
 
 if [ "$SONGTYPE" == "ogg" ] || [ "$SONGTYPE" == "OGG" ] ; then
-  ogg123 -q "$SONG"
+  ogg123 -b 4096 -q "$SONG"
 elif [ "$SONGTYPE" == "mp3" ] || [ "$SONGTYPE" == "MP3" ] ; then
-  mpg321 -q "$SONG"
+  mpg123 -b 4096 -q "$SONG" 2> /dev/null
 else
-  bplay "$SONG"
+  bplay -B 4096 "$SONG"
 fi
 }
 
@@ -148,7 +154,7 @@ function do_showtime {
 STARTTIME=$(date +%s)
 
 while true ; do
-  COUNTCHK=$((COUNT%10))
+  COUNTCHK=$((COUNT%$SCANRATE))
   if [ "$COUNTCHK" -eq "0" ] ; then
     NOWTIME=$(date +%s)
     TOTALTIME=$(($NOWTIME - $STARTTIME))
