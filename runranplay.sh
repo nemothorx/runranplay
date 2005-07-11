@@ -98,7 +98,7 @@ echo "$SONG" > /tmp/.currentsong
 if [ "$SONGTYPE" == "ogg" ] || [ "$SONGTYPE" == "OGG" ] ; then
   ogg123 -b 4096 -q "$SONG"
 elif [ "$SONGTYPE" == "mp3" ] || [ "$SONGTYPE" == "MP3" ] ; then
-  mpg123 -b 4096 -q "$SONG" 2> /dev/null
+  mpg321 -b 4096 -q "$SONG" #  2> /dev/null
 else
   bplay -B 4096 "$SONG"
 fi
