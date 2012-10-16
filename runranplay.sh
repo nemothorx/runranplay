@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # RUN RANdom PLAYlist
 # ie, play random songs. simply. 
 
@@ -11,21 +10,60 @@
 #	* ensure `find` only finds regular files 
 # 20050222 - 1.2
 #	* $SCANRATE added
+# 20060804 - 1.3
+#	* m4a support added
+# 20080121 - 1.4beta
+#	* video support added (mpeg/mov/avi/etc)
+#	* player now uses `mplayer` for ALL formats for simplicity
+#	* video will fail and move in if $DISPLAY fails...
+#	* note that this now enables forward/rewind within a track
+# 20080406 - 1.5
+#	* the HISTORYSIZE is now dynamic is SONGCOUNT less than 50
+#	* HISTORY array is now correctly re-populated as songs played
+#	  (previously was only populating for 'historysize' times
+#	  after each scan refresh. If scanrate was larger than size,
+#	  then history was no longer being updated)
+# 20110815 - 1.6
+#	* aif support added (ie, I found I had aif files,
+#	  and that mplayer supported them :)
+#	* fixed issue with SONGCOUNT=51 -> HISTORYSIZE=50
+#	    ...it's now dynamic up till SONGCOUNT=100
+# 20120415 - 1.7
+#	* flac, wma, m4a support added (yeah, m4a fell out somewhere since 1.3)
+#	* random album support added (-album)
+#	* SONGCOUNT is now ITEMCOUNT
+# 20120513 - 1.8
+#	* improved -album handling to detect the songtype
+#	   ...before: mplayer $ALBUM/*
+#	   ...now: mplayer $ALBUM/*.$SONGTYPE
+# 20120724 - 1.9
+#	* handle #comments in .m3u files
 
 # Created by Nemo <runranplay@nemo.house.cx> for himself. 
 # Let's say it's licensed under the GPL. That's simple eh? :)
 
 SCANRATE=20	# rescan every how many songs?
 COUNT=0		# how many songs have we played?
-HISTORYSIZE=100	# how much collision history to keep?
+HISTORYSIZE=50	# how much collision history to keep?
+HISTORYMADE=0	# simple flag to say we haven't made history yet
 declare -a HISTORY
-for i in $(seq 0 $HISTORYSIZE) ; do
-  HISTORY[$i]=0
-done
 
+function do_mkhistory {
+    if [ $ITEMCOUNT -lt 100 ] ; then
+	HISTORYSIZE=$(($ITEMCOUNT/2))
+	echo -n  " ...adjusting historysize" 
+    fi
+    for i in $(seq 1 $HISTORYSIZE) ; do
+      HISTORY[$i]=0
+    done
+    HISTORYMADE=1
+}
 
 function do_findpldir {
-  if [ -w . ] ; then
+  if [ -w "$PWD" ] ; then
+  # TODO: it needs to check the .playlist.m3x and playlist.m3x writability too,
+  # since $PWD writability is pointless if .playlist.m3x exists already and
+  # *isn't*, then that sucks!
     PLAYLISTAT="."
     PLAYLISTTYPE=local
   else
@@ -35,74 +73,83 @@ function do_findpldir {
 }
 
 function do_findsongs {
-# first up, let's find all the songs we want
+    # first up, let's find all the songs we want
 
-echo -n " * Finding songs in $PWD"
-# find "." \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -type f -printf '%p\n' > $PLAYLISTAT/.playlist
-find "." -type f \( -iname \*ogg -o -iname \*OGG -o -iname \*wav -o -iname \*WAV -o -iname \*mp3 -o -iname \*MP3 \) -follow -printf '%p\n' > $PLAYLISTAT/.playlist.m3u
-sort $PLAYLISTAT/.playlist.m3u > $PLAYLISTAT/playlist.m3u
-echo " ... saved to $PLAYLISTAT/playlist.m3u"
-
-SONGCOUNT=$(cat $PLAYLISTAT/playlist.m3u | wc -l)
-echo " * Songs in playlist: $SONGCOUNT"
+    echo -n " * Finding songs in $PWD"
+    #find "." -type f \( -iname \*ogg -o -iname \*wav -o -iname \*mp3 \) -follow -printf '%p\n' > $PLAYLISTAT/.playlist.m3u
+    find "." -type f \( -iname \*flac -o -iname \*ogg -o -iname \*wav -o -iname \*mp3 -o -iname \*mpg -o -iname \*avi -o -iname \*mpeg -o -iname \*flv -o -iname \*mov -o -iname \*m2v -o -iname \*mp4 -o -iname \*m4a -o -iname \*aif -o -iname \*aiff -o -iname \*wma \) -follow -printf '%p\n' > $PLAYLISTAT/.playlist.m3x
+    sort $PLAYLISTAT/.playlist.m3x > $PLAYLISTAT/playlist.m3x
+    echo " ... saved to $PLAYLISTAT/playlist.m3x"
 }
 
+function do_findalbums {
+    cat $SONGLISTFILE | egrep -o ".*/" | uniq > $PLAYLISTAT/.albumlist
+}
 
 function do_getrandom {
-# this functions finds us a random number, one that hasn't been used recently
+    # this functions finds us a random number, one that hasn't been used recently
 
-# force the looping :)
-UNIQUE=no
+    # force the looping :)
+    UNIQUE=no
 
-while [ "$UNIQUE" == "no" ] ; do 
+    echo -n "[ "
+    while [ "$UNIQUE" == "no" ] ; do 
 
-  PLAYNUMBER=$(echo "($RANDOM*$SONGCOUNT)/32767+1" | bc)  # should be an integer number?
+	#  PLAYNUMBER=$(echo "($RANDOM*$ITEMCOUNT)/32767+1" | bc)  # should be an integer number?
+	PLAYNUMBER=`expr \( $RANDOM % $ITEMCOUNT \) + 1`
 
-# echo -n "debug: $PLAYNUMBER"
-  # assume our chosen number IS unique...
-  UNIQUE=yes
+	# now assume our chosen number IS unique...
+	UNIQUE=yes
 
+	# loop through the history checking for repeats
+	for i in $(seq 1 $HISTORYSIZE) ; do
+	    if [ ${HISTORY[$i]} -eq $PLAYNUMBER ] ; then
+		    # found a repeat, unique=no
+		    UNIQUE=no
+		    echo -n "."
+	    fi
+	done
 
-# loop through the history checking for repeats
-  for i in $(seq 0 $HISTORYSIZE) ; do
-	if [ ${HISTORY[$i]} -eq $PLAYNUMBER ] ; then
-		# found a repeat, unique=no
-		UNIQUE=no
-		echo -n "."
-	fi
-  done
+    #  echo "" # debug
+    # at this point, either unique=no and we loop back and choose a new PLAYNUMBER
+    # or unique=yes and we leave the loop
 
-#  echo "" # debug
-# at this point, either unique=no and we loop back and choose a new PLAYNUMBER
-# or unique=yes and we leave the loop
-
-done
-  # finally, store our selected number in the array for future history
-  HISTORY[$COUNTCHK]=$PLAYNUMBER
+    done
+    # finally, store our selected number in the array for future history
+    HISTORYNUM=$((COUNT%HISTORYSIZE+1))
+    # HISTORYNUM cycles through the HISTORYSIZE to ensure history is correctly
+    # populated
+    HISTORY[$HISTORYNUM]=$PLAYNUMBER
+    echo -n "$PLAYNUMBER ]	"
 }
 
 
 function do_playrandom {
 
-# first, find a random song from that list
-do_getrandom
+    # first, find a random song from that list
+    do_getrandom
 
-# is there a better way to extract a specific line from a file?
-SONG=$(head -n $PLAYNUMBER $PLAYLISTAT/playlist.m3u | tail -1)
+    # is there a better way to extract a specific line from a file?
+    TARGET=$(grep -v "^#" $PLAYLISTFILE | head -n $PLAYNUMBER  | tail -1)
+    echo "$TARGET" > /tmp/.currentsong
 
-SONGTYPE=${SONG##*.}
-
-echo "$SONG"
-echo "$SONG" > /tmp/.currentsong
-
-if [ "$SONGTYPE" == "ogg" ] || [ "$SONGTYPE" == "OGG" ] ; then
-  ogg123 -b 4096 -q "$SONG"
-elif [ "$SONGTYPE" == "mp3" ] || [ "$SONGTYPE" == "MP3" ] ; then
-  mpg321 -b 4096 -q "$SONG" #  2> /dev/null
-else
-  bplay -B 4096 "$SONG"
-fi
+    if [ "$ALBUM" == "true" ] ; then
+	echo $TARGET
+	SONGONE=$(grep "$TARGET" $SONGLISTFILE | head -1)
+	SONGTYPE=${SONGONE##*.}
+	SONGNAME=${SONGONE%.*}
+	PLAYTHIS=$TARGET
+    else
+	SONG=$TARGET
+	SONGNAME=${SONG%.*}
+        SONGTYPE=${SONG##*.}
+	PLAYTHIS=$SONGNAME
+    fi
+    # So mplayer should work on all songs AND vid... ;)
+    # TODO: detect $DISPLAY to handle this better :)
+    mplayer -quiet "$PLAYTHIS"*$SONGTYPE 2> /dev/null | grep Playing
 }
+
 
 
 function do_showtime {
@@ -164,12 +211,36 @@ while true ; do
       SHOW_AVERAGETIME=$(do_showtime $AVERAGETIME)
       echo " * $COUNT tracks in $SHOW_TOTALTIME. Average $SHOW_AVERAGETIME per track"
     fi
-    do_findpldir 
-    echo " * Auto updating $PLAYLISTTYPE playlist now"
-    do_findsongs
+    case "$1" in
+	*.m3x|*.m3u)
+	    # we have a m3u already...
+	    PLAYLISTFILE=$1
+	    ;;
+	-album)
+	    ALBUM=true
+	    # unknown/no option given, we make our own
+	    do_findpldir 
+	    echo " * Auto updating $PLAYLISTTYPE playlist now"
+	    do_findsongs
+	    SONGLISTFILE="$PLAYLISTAT/playlist.m3x"
+	    do_findalbums
+	    PLAYLISTFILE="$PLAYLISTAT/.albumlist"
+	    ;;
+	*)
+	    # unknown/no option given, we make our own
+	    do_findpldir 
+	    echo " * Auto updating $PLAYLISTTYPE playlist now"
+	    do_findsongs
+	    SONGLISTFILE="$PLAYLISTAT/playlist.m3x"
+	    PLAYLISTFILE=$SONGLISTFILE
+    esac
+    ITEMCOUNT=$(grep -c -v "^#" $PLAYLISTFILE)
+    echo -n " * Items in playlist: $ITEMCOUNT"
+    [ "$HISTORYMADE" -ne "1" ] && do_mkhistory
+    echo " ...history size is $HISTORYSIZE"
   fi
-  COUNT=$((COUNT+1))
   do_playrandom
+  COUNT=$((COUNT+1))
 done
 
 # actually, this last bit never occurs, since the ^c'ing out of the
