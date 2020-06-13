@@ -38,6 +38,9 @@
 #	   ...now: mplayer $ALBUM/*.$SONGTYPE
 # 20120724 - 1.9
 #	* handle #comments in .m3u files
+# 20200613 - 1.10
+#       * use mpv instead of mplayer
+#       * slight tweak of output
 
 # Created by Nemo <runranplay@nemo.house.cx> for himself. 
 # Let's say it's licensed under the GPL. That's simple eh? :)
@@ -120,7 +123,7 @@ function do_getrandom {
     # HISTORYNUM cycles through the HISTORYSIZE to ensure history is correctly
     # populated
     HISTORY[$HISTORYNUM]=$PLAYNUMBER
-    echo -n "$PLAYNUMBER ]	"
+    printf "%8s" "$PLAYNUMBER ]"
 }
 
 
@@ -147,7 +150,10 @@ function do_playrandom {
     fi
     # So mplayer should work on all songs AND vid... ;)
     # TODO: detect $DISPLAY to handle this better :)
-    mplayer -quiet "$PLAYTHIS"*$SONGTYPE 2> /dev/null | grep Playing
+    #mplayer -quiet "$PLAYTHIS"*$SONGTYPE 2> /dev/null | grep Playing
+    echo -n " $PLAYTHIS"
+    mpv --really-quiet "$PLAYTHIS"*$SONGTYPE
+    echo 
 }
 
 
