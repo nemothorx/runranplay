@@ -151,7 +151,8 @@ function do_playrandom {
     # So mplayer should work on all songs AND vid... ;)
     # TODO: detect $DISPLAY to handle this better :)
     #mplayer -quiet "$PLAYTHIS"*$SONGTYPE 2> /dev/null | grep Playing
-    echo -n " $PLAYTHIS"
+    # echo -n " $PLAYTHIS"
+    echo -n " $TARGET"
     mpv --really-quiet "$PLAYTHIS"*$SONGTYPE
     echo 
 }
