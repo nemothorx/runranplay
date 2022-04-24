@@ -221,7 +221,7 @@ while true ; do
       echo " * $COUNT tracks in $SHOW_TOTALTIME. Average $SHOW_AVERAGETIME per track"
     fi
     case "$1" in
-	*.m3x|*.m3u)
+	*.m3x|*.m3u|*.M3X|*.M3U)
 	    # we have a m3u already...
 	    PLAYLISTFILE=$1
 	    ;;
