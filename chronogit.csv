@@ -1,0 +1,17 @@
+runranplay_1.0 runranplay.sh "play songs. simply"\\n\\n  * Supports ogg,mp3,wav\\n  * 10 song uniqueness history\\n  * origin of "showtime" function
+runranplay_1.0_ runranplay.sh 20030930 - 1.0 release\\n\\n  * `find` now uses -follow
+runranplay_1.1 runranplay.sh 20040505 - 1.1\\n  * use /tmp/.playlist if $PWD/.playlist is unwritable    \\n  * ensure `find` only finds regular files 
+
+# Myk's branch. For posterity
+$ git branch Myk
+$ git checkout Myk
+runranplay_1.2_Myk runranplay.sh Myk's own 1.2.\\n\\n20040714 - 1.2\\n  * Put song title in /home/music/nowplaying.txt\\n  * Allow setting HISTORY index by parameter\\n  * Restricted playlist build to only .mp3 files
+
+$ git checkout main
+runranplay_1.2 runranplay.sh My 1.2 not based on Myk's code \\n\\n20050222 - 1.2\\n  * $SCANRATE added\\n
+runranplay_1.2_ runranplay.sh replaced mpg123 with mpg321 (revert to 1.1 external call)
+runranplay_1.9 runranplay.sh [1.3-1.8 changelog catchup (lost version) +1.9]\\n\\n20060804 - 1.3\\n  * m4a support added\\n20080121 - 1.4beta\\n  * video support added (mpeg/mov/avi/etc)\\n  * player now uses `mplayer` for ALL formats for simplicity\\n  * video will fail and move in if $DISPLAY fails...\\n  * note that this now enables forward/rewind within a track\\n20080406 - 1.5\\n  * the HISTORYSIZE is now dynamic if SONGCOUNT less than 50\\n  * HISTORY array is now correctly re-populated as songs played\\n    (previously was only populating for 'historysize' times\\n    after each scan refresh. If scanrate was larger than size,\\n    then history was no longer being updated)\\n20110815 - 1.6\\n  * aif support added (ie, I found I had aif files,\\n    and that mplayer supported them :)\\n  * fixed issue with SONGCOUNT=51 -> HISTORYSIZE=50\\n    ...it's now dynamic up till SONGCOUNT=100\\n20120415 - 1.7\\n  * flac, wma, m4a support added (yeah, m4a fell out somewhere since 1.3)\\n  * random album support added (-album)\\n  * SONGCOUNT is now ITEMCOUNT\\n20120513 - 1.8\\n  * improved -album handling to detect the songtype\\n    ...before: mplayer $ALBUM/*\\n    ...now: mplayer $ALBUM/*.$SONGTYPE\\n20120724 - 1.9\\n  * handle #comments in .m3u files\\n
+runranplay_1.10 runranplay.sh 20200613 - 1.10\\n  * use mpv instead of mplayer\\n  * slight tweak of output
+runranplay_1.10_ runranplay.sh output full filename (don't truncate suffix)
+runranplay_1.11 runranplay.sh 20210909 - 1.11\\n  * `find` now ignores /all/ paths. for 4zzz archive suiting
+runranplay_1.11_ runranplay.sh playlist filetypes now includee M3X/M3U 
