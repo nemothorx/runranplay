@@ -138,27 +138,25 @@ function do_playrandom {
 
     # is there a better way to extract a specific line from a file?
     TARGET=$(grep -v "^#" $PLAYLISTFILE | head -n $PLAYNUMBER  | tail -1)
-    echo "$TARGET" > /tmp/.currentsong
+#    echo "$TARGET" > /tmp/.currentsong
 
     if [ "$ALBUM" == "true" ] ; then
-	echo $TARGET
+#	echo ">>>$TARGET<<<"
 	SONGONE=$(grep "$TARGET" $SONGLISTFILE | head -1)
 	SONGTYPE=${SONGONE##*.}
 	SONGNAME=${SONGONE%.*}
-	PLAYTHIS=$TARGET
+        # PLAYTHIS=$(ls -1 $TARGET*$SONGTYPE)
     else
+#        echo ">>$TARGET<<"
 	SONG=$TARGET
 	SONGNAME=${SONG%.*}
         SONGTYPE=${SONG##*.}
-	PLAYTHIS=$SONGNAME
+	PLAYTHIS=$TARGET
     fi
     # So mplayer should work on all songs AND vid... ;)
     # TODO: detect $DISPLAY to handle this better :)
-    #mplayer -quiet "$PLAYTHIS"*$SONGTYPE 2> /dev/null | grep Playing
-    # echo -n " $PLAYTHIS"
     echo -n " $TARGET"
-    # TODO: BUG to fix: the wildcard here means we can end up playing too many files. 
-    mpv --really-quiet "$PLAYTHIS"*$SONGTYPE
+    grep "$TARGET" $SONGLISTFILE | tr "\n" "\0" | xargs -0 mpv --really-quiet
     echo 
 }
 
