@@ -103,7 +103,8 @@ function do_getrandom {
     while [ "$UNIQUE" == "no" ] ; do 
 
 	#  PLAYNUMBER=$(echo "($RANDOM*$ITEMCOUNT)/32767+1" | bc)  # should be an integer number?
-	PLAYNUMBER=`expr \( $RANDOM % $ITEMCOUNT \) + 1`
+#	PLAYNUMBER=`expr \( $RANDOM % $ITEMCOUNT \) + 1`
+        PLAYNUMBER=$(shuf -i 1-$ITEMCOUNT -n 1) # let's not limit our playlist to the max of $RANDOM
 
 	# now assume our chosen number IS unique...
 	UNIQUE=yes
