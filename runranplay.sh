@@ -157,7 +157,7 @@ function do_playrandom {
     # So mplayer should work on all songs AND vid... ;)
     # TODO: detect $DISPLAY to handle this better :)
     echo -n " $TARGET"
-    grep "$TARGET" $SONGLISTFILE | tr "\n" "\0" | xargs -0 mpv --really-quiet
+    grep "$TARGET" $SONGLISTFILE | tr "\n" "\0" | xargs -0 mpv --really-quiet --vid=no
     echo 
 }
 
