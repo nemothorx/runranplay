@@ -45,6 +45,8 @@
 #       * `find` now ignores /all/ paths. for 4zzz archive suiting
 # 20220612 - 1.12
 #       * now supporting opus
+# 20250604 - 1.13
+#       * fixed bug where paths with square brackets would fail
 
 # Created by Nemo <runranplay@nemo.house.cx> for himself. 
 # Let's say it's licensed under the GPL. That's simple eh? :)
@@ -157,7 +159,7 @@ function do_playrandom {
     # So mplayer should work on all songs AND vid... ;)
     # TODO: detect $DISPLAY to handle this better :)
     echo -n " $TARGET"
-    grep "$TARGET" $SONGLISTFILE | tr "\n" "\0" | xargs -0 mpv --really-quiet --vid=no
+    grep -F "$TARGET" $SONGLISTFILE | tr "\n" "\0" | xargs -0 mpv --really-quiet --vid=no
     echo 
 }
 
